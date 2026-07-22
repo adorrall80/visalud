@@ -8,8 +8,10 @@ TEST_PATH=${TEST_PATH:-/home/jatoyris/visalud.esremate.cl/pruebas}
 PROD_PATH=${PROD_PATH:-/home/jatoyris/visalud.esremate.cl}
 
 RUN_COMPOSER=false
+RUN_FRESH_EMPTY=false
 RUN_FRESH_DEMO=false
 RUN_SEED_INITIAL=false
+RUN_SEED_DEMO=false
 APP_PATH=""
 APP_ENVIRONMENT=""
 
@@ -23,15 +25,20 @@ print_help() {
     echo ""
     echo "Opciones:"
     echo "  --composer             Reinstalar vendor con composer install --no-dev"
-    echo "  --seed-initial         Ejecutar php console db:seed despues de migrar"
+    echo "  --fresh-empty          Limpiar la base y dejar solo tablas vacias"
+    echo "  --seed-initial         Reaplicar catalogos base despues de migrar"
+    echo "  --seed-demo            Cargar catalogos base y datos demo sin limpiar"
     echo "  --fresh-demo           Reconstruir la base con migrate:fresh --seed"
     echo "  --help                 Mostrar esta ayuda"
     echo ""
     echo "Ejemplos:"
     echo "  bash scripts/post-deploy.sh --help"
     echo "  bash scripts/post-deploy.sh --test --composer"
+    echo "  bash scripts/post-deploy.sh --test --fresh-empty"
+    echo "  bash scripts/post-deploy.sh --test --seed-initial"
+    echo "  bash scripts/post-deploy.sh --test --seed-demo"
     echo "  bash scripts/post-deploy.sh --test --fresh-demo"
-    echo "  bash scripts/post-deploy.sh --prod --seed-initial"
+    echo "  bash scripts/post-deploy.sh --prod"
 }
 
 for arg in "$@"; do
@@ -54,11 +61,17 @@ for arg in "$@"; do
         --composer)
             RUN_COMPOSER=true
             ;;
+        --fresh-empty)
+            RUN_FRESH_EMPTY=true
+            ;;
         --fresh-demo)
             RUN_FRESH_DEMO=true
             ;;
         --seed-initial)
             RUN_SEED_INITIAL=true
+            ;;
+        --seed-demo)
+            RUN_SEED_DEMO=true
             ;;
         *)
             echo "ERROR: argumento no reconocido: $arg"
@@ -71,6 +84,11 @@ if [ -z "$APP_PATH" ]; then
     echo "ERROR: debes indicar ambiente: --test o --prod"
     echo ""
     print_help
+    exit 1
+fi
+
+if [ "$RUN_SEED_INITIAL" = true ] && [ "$RUN_SEED_DEMO" = true ]; then
+    echo "ERROR: debes elegir solo un seeder: --seed-initial o --seed-demo"
     exit 1
 fi
 
@@ -104,19 +122,44 @@ mkdir -p storage/cache storage/logs storage/documentos
 chmod -R 775 storage/cache storage/logs storage/documentos
 
 echo "== Base de datos =="
-if [ "$RUN_FRESH_DEMO" = true ]; then
+if [ "$RUN_FRESH_EMPTY" = true ] && [ "$APP_ENVIRONMENT" = "prod" ]; then
+    echo "ERROR: --fresh-empty no se puede ejecutar en produccion."
+    exit 1
+fi
+
+if [ "$RUN_FRESH_DEMO" = true ] && [ "$APP_ENVIRONMENT" = "prod" ]; then
+    echo "ERROR: --fresh-demo no se puede ejecutar en produccion."
+    exit 1
+fi
+
+if [ "$RUN_SEED_DEMO" = true ] && [ "$APP_ENVIRONMENT" = "prod" ]; then
+    echo "ERROR: --seed-demo no se puede ejecutar en produccion."
+    exit 1
+fi
+
+if [ "$RUN_FRESH_EMPTY" = true ]; then
+    echo "== Modo fresh empty: reconstruir base sin datos =="
+    $PHP84 console migrate:fresh
+    echo "== Base limpia; tablas creadas sin seeders =="
+elif [ "$RUN_FRESH_DEMO" = true ]; then
     echo "== Modo fresh demo: reconstruir base y cargar demo =="
     $PHP84 console migrate:fresh --seed
     echo "== Demo cargada correctamente =="
 else
     echo "== Modo normal: aplicar migraciones pendientes =="
     $PHP84 console migrate
+fi
 
-    if [ "$RUN_SEED_INITIAL" = true ]; then
-        echo "== Cargar datos iniciales =="
-        $PHP84 console db:seed
-        echo "== Datos iniciales cargados correctamente =="
-    fi
+if [ "$RUN_FRESH_DEMO" != true ] && [ "$RUN_SEED_INITIAL" = true ]; then
+    echo "== Reaplicar catalogos base =="
+    $PHP84 console db:seed
+    echo "== Catalogos base actualizados; no se cargo demo =="
+fi
+
+if [ "$RUN_FRESH_DEMO" != true ] && [ "$RUN_SEED_DEMO" = true ]; then
+    echo "== Cargar datos demo =="
+    $PHP84 console db:seed --demo
+    echo "== Demo cargada correctamente =="
 fi
 
 echo "== Limpiar OPcache =="
