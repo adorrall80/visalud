@@ -1,0 +1,85 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Console\Migrator;
+use App\Console\Seeder;
+use App\Console\ProductionCheck;
+use App\Core\Database;
+use App\Core\Env;
+
+$rootPath = __DIR__;
+$autoload = $rootPath . '/vendor/autoload.php';
+
+if (!is_file($autoload)) {
+    fwrite(STDERR, "Ejecute composer install antes de usar la consola.\n");
+    exit(1);
+}
+
+require $autoload;
+Env::load($rootPath . '/.env');
+
+$environment = (string) env('APP_ENV', 'production');
+$command = $argv[1] ?? 'help';
+$database = Database::connect(require $rootPath . '/config/database.php')->connection();
+$migrator = new Migrator($database, $rootPath . '/database/migrations');
+$seeder = new Seeder($database, $rootPath);
+
+try {
+    switch ($command) {
+        case 'migrate':
+            $executed = $migrator->migrate();
+            echo $executed === [] ? "No hay migraciones pendientes.\n" : implode("\n", $executed) . "\n";
+            break;
+
+        case 'migrate:status':
+            foreach ($migrator->status() as $row) {
+                echo ($row['applied'] ? '[x] ' : '[ ] ') . $row['migration'] . "\n";
+            }
+            break;
+
+        case 'db:seed':
+            $includeDemo = in_array('--demo', $argv, true);
+            if ($includeDemo && $environment !== 'local') {
+                throw new RuntimeException('El seeder demo solo se puede ejecutar en entorno local.');
+            }
+            $seeder->run($includeDemo);
+            echo "Seeders ejecutados.\n";
+            break;
+
+        case 'migrate:fresh':
+            if ($environment === 'production') {
+                throw new RuntimeException('migrate:fresh está prohibido en producción.');
+            }
+            $migrator->fresh();
+            $migrator->migrate();
+            if (in_array('--seed', $argv, true)) {
+                $seeder->run(true);
+            }
+            echo "Base reconstruida correctamente.\n";
+            break;
+
+        case 'app:check':
+            $checker = new ProductionCheck($database, $rootPath, $migrator);
+            $checks = $checker->run(in_array('--production', $argv, true));
+            foreach ($checks as $check) {
+                echo ($check['passed'] ? '[x] ' : '[!] ') . $check['label'] . "\n";
+            }
+            if ($checker->hasFailures($checks)) {
+                exit(1);
+            }
+            break;
+
+        default:
+            echo "Comandos disponibles:\n";
+            echo "  php console migrate\n";
+            echo "  php console migrate:status\n";
+            echo "  php console db:seed\n";
+            echo "  php console db:seed --demo\n";
+            echo "  php console migrate:fresh --seed\n";
+            echo "  php console app:check [--production]\n";
+    }
+} catch (Throwable $exception) {
+    fwrite(STDERR, $exception->getMessage() . "\n");
+    exit(1);
+}

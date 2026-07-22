@@ -1,0 +1,21 @@
+CREATE TABLE medicamentos (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  persona_id BIGINT UNSIGNED NOT NULL,
+  atencion_id BIGINT UNSIGNED NULL,
+  estado_id BIGINT UNSIGNED NOT NULL,
+  nombre VARCHAR(150) NOT NULL,
+  dosis VARCHAR(100) NOT NULL,
+  frecuencia VARCHAR(150) NULL,
+  fecha_inicio DATE NOT NULL,
+  fecha_termino DATE NULL,
+  indicaciones TEXT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_medicamentos_persona_estado (persona_id, estado_id),
+  KEY idx_medicamentos_atencion (atencion_id),
+  KEY idx_medicamentos_fecha_termino (fecha_termino),
+  CONSTRAINT chk_medicamentos_fechas CHECK (fecha_termino IS NULL OR fecha_termino >= fecha_inicio),
+  CONSTRAINT fk_medicamentos_persona FOREIGN KEY (persona_id) REFERENCES personas(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_medicamentos_atencion FOREIGN KEY (atencion_id) REFERENCES atenciones(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_medicamentos_estado FOREIGN KEY (estado_id) REFERENCES estados(id) ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -1,0 +1,5 @@
+<dialog class="appointment-modal document-preview-modal" id="document-preview-<?= $view->escape($documento['id']) ?>" style="--event-color:#426f8a" aria-labelledby="document-preview-title-<?= $view->escape($documento['id']) ?>">
+    <div class="appointment-modal__header"><div><span class="appointment-modal__status"><i></i>Vista previa</span><h2 id="document-preview-title-<?= $view->escape($documento['id']) ?>"><?= $view->escape($documento['nombre']) ?></h2></div><form method="dialog"><button type="submit" aria-label="Cerrar vista previa">×</button></form></div>
+    <div class="appointment-modal__body document-preview-modal__body"><img src="/documentos/<?= $view->escape($documento['id']) ?>/preview" alt="Vista previa de <?= $view->escape($documento['nombre']) ?>" loading="lazy"></div>
+    <footer class="appointment-modal__footer"><form method="dialog"><button class="button button--secondary" type="submit">Cerrar</button></form><a class="button button--primary" href="/documentos/<?= $view->escape($documento['id']) ?>/download">Descargar</a></footer>
+</dialog>

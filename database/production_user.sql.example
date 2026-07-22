@@ -1,0 +1,5 @@
+-- Ejecutar como administrador de MySQL y reemplazar la clave antes de usar.
+CREATE USER 'portal_salud_app'@'localhost' IDENTIFIED BY 'CAMBIAR_POR_CLAVE_SEGURA';
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES
+  ON portal_salud.* TO 'portal_salud_app'@'localhost';
+FLUSH PRIVILEGES;
