@@ -88,6 +88,19 @@ jobs:
           chmod -R 775 storage
           php console migrate
           php console db:seed --demo
+          php <<'PHP'
+          <?php
+          $database = new PDO('mysql:host=127.0.0.1;port=3306;dbname=portal_salud;charset=utf8mb4', 'root', 'root', [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+          $roleId = (int) $database->query("SELECT t.id FROM tipos t INNER JOIN procesos p ON p.id = t.proceso_id WHERE p.codigo = 'MIEMBRO_FAMILIA' AND t.codigo = 'ADMINISTRADOR' LIMIT 1")->fetchColumn();
+          $database->exec("INSERT INTO usuarios (nombre, email, google_sub, email_verificado_at, activo) VALUES ('Usuario CI', 'ci@example.test', 'ci-google-sub', UTC_TIMESTAMP(), 1) ON DUPLICATE KEY UPDATE nombre = VALUES(nombre), activo = 1");
+          $userId = (int) $database->query("SELECT id FROM usuarios WHERE google_sub = 'ci-google-sub' LIMIT 1")->fetchColumn();
+          $database->exec("INSERT INTO familias (nombre) SELECT 'Familia CI' WHERE NOT EXISTS (SELECT 1 FROM familias WHERE nombre = 'Familia CI')");
+          $familyId = (int) $database->query("SELECT id FROM familias WHERE nombre = 'Familia CI' LIMIT 1")->fetchColumn();
+          $statement = $database->prepare('INSERT INTO familia_usuarios (familia_id, usuario_id, tipo_rol_id) VALUES (:familia_id, :usuario_id, :rol_id) ON DUPLICATE KEY UPDATE tipo_rol_id = VALUES(tipo_rol_id)');
+          $statement->execute(['familia_id' => $familyId, 'usuario_id' => $userId, 'rol_id' => $roleId]);
+          $person = $database->prepare("INSERT INTO personas (familia_id, nombre, identificacion) VALUES (:familia_id, 'Persona CI', 'CI-PERSONA') ON DUPLICATE KEY UPDATE nombre = VALUES(nombre)");
+          $person->execute(['familia_id' => $familyId]);
+          PHP
 
       - name: Application check
         run: php console app:check
