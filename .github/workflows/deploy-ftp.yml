@@ -84,6 +84,8 @@ jobs:
 
       - name: Prepare database
         run: |
+          mkdir -p storage/cache storage/logs storage/documentos
+          chmod -R 775 storage
           php console migrate
           php console db:seed
 
