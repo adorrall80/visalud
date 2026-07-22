@@ -87,7 +87,7 @@ jobs:
           mkdir -p storage/cache storage/logs storage/documentos
           chmod -R 775 storage
           php console migrate
-          php console db:seed
+          php console db:seed --demo
 
       - name: Application check
         run: php console app:check
