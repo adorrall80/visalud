@@ -12,7 +12,7 @@ No se debe publicar la raíz del proyecto. `.env`, `storage/`, `vendor/` y las m
 ## 2. Primera instalación
 
 1. Copiar el proyecto al servidor.
-2. Ejecutar `composer install --no-dev --optimize-autoloader`.
+2. Ejecutar `composer install --no-dev --prefer-dist --optimize-autoloader`.
 3. Copiar `.env.production.example` como `.env` y reemplazar todos los valores de ejemplo.
 4. Crear `portal_salud` con `utf8mb4_unicode_ci`.
 5. Crear el usuario de permisos mínimos tomando como base `database/production_user.sql.example`.
@@ -42,8 +42,8 @@ Si existe un proxy inverso, este debe reemplazar y controlar `X-Forwarded-Proto`
 1. Crear respaldo de la base y de `storage/documentos`.
 2. Activar una página de mantenimiento en el servidor web.
 3. Instalar el nuevo código conservando `.env` y `storage/`.
-4. Ejecutar `composer install --no-dev --optimize-autoloader`.
-5. Ejecutar `php console migrate` y `php console db:seed`.
+4. Si cambiaron `composer.json` o `composer.lock`, ejecutar `composer install --no-dev --prefer-dist --optimize-autoloader`.
+5. Ejecutar `php console migrate` y, si corresponde, `php console db:seed`.
 6. Revisar `php console migrate:status`.
 7. Desactivar mantenimiento y comprobar acceso, dashboard y descarga privada.
 
@@ -67,15 +67,23 @@ FTP_TESTING_DIR=./pruebas/
 
 Si el hosting solo permite publicar directamente en `public_html` y no permite apuntar el dominio a `public/`, no se debe subir la raíz completa del proyecto a `public_html`, porque quedarían expuestos archivos privados. En ese caso hay que usar una estructura separada, por ejemplo una carpeta privada para la aplicación y `public_html` solo con el contenido público.
 
-El workflow no sube `.env`, `.env.*`, `.git`, `.github`, `tests`, cachés, logs ni `storage/documentos`. El archivo `.env` de producción y la carpeta `storage/documentos` deben mantenerse en el servidor.
+El workflow no sube `.env`, `.env.*`, `.git`, `.github`, `vendor`, `tests`, cachés, logs ni `storage/documentos`. El archivo `.env`, `vendor/` y la carpeta `storage/documentos` deben mantenerse en el servidor.
 
 Después de cada despliegue, ejecutar en el hosting:
 
 ```text
-php console migrate
-php console db:seed
-php console app:check --production
+bash scripts/post-deploy.sh --test
+bash scripts/post-deploy.sh --prod
 ```
+
+Cuando cambien dependencias, agregar `--composer` para reinstalar `vendor/` directamente en el hosting:
+
+```text
+bash scripts/post-deploy.sh --test --composer
+bash scripts/post-deploy.sh --prod --composer
+```
+
+Para una primera carga de datos iniciales, agregar `--seed-initial`. El modo `--fresh-demo` reconstruye la base y solo debe usarse en ambientes no productivos donde `.env` tenga `APP_ENV=local`.
 
 ## 5. Respaldos y restauración
 
