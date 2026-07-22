@@ -28,8 +28,9 @@ print_help() {
     echo "  --help                 Mostrar esta ayuda"
     echo ""
     echo "Ejemplos:"
-    echo "  bash scripts/post-deploy.sh --test"
+    echo "  bash scripts/post-deploy.sh --help"
     echo "  bash scripts/post-deploy.sh --test --composer"
+    echo "  bash scripts/post-deploy.sh --test --fresh-demo"
     echo "  bash scripts/post-deploy.sh --prod --seed-initial"
 }
 
@@ -106,6 +107,7 @@ echo "== Base de datos =="
 if [ "$RUN_FRESH_DEMO" = true ]; then
     echo "== Modo fresh demo: reconstruir base y cargar demo =="
     $PHP84 console migrate:fresh --seed
+    echo "== Demo cargada correctamente =="
 else
     echo "== Modo normal: aplicar migraciones pendientes =="
     $PHP84 console migrate
@@ -113,6 +115,7 @@ else
     if [ "$RUN_SEED_INITIAL" = true ]; then
         echo "== Cargar datos iniciales =="
         $PHP84 console db:seed
+        echo "== Datos iniciales cargados correctamente =="
     fi
 fi
 
@@ -125,6 +128,8 @@ if [ "$APP_ENVIRONMENT" = "prod" ]; then
 else
     $PHP84 console app:check
 fi
+
+echo "== Estado de migraciones =="
 $PHP84 console migrate:status
 
 echo "Post deploy terminado OK"
