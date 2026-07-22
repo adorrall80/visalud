@@ -118,16 +118,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.3'
-          extensions: pdo_mysql, openssl, mbstring, json, fileinfo
-          coverage: none
-
-      - name: Install production dependencies
-        run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress
-
       # Produccion: solo cuando haces push a master.
       - name: Deploy production root
         if: github.ref == 'refs/heads/master'
@@ -150,6 +140,7 @@ jobs:
             **/.env
             **/.env.*
             **/.phpunit.cache/**
+            **/vendor/**
             **/tests/**
             **/storage/cache/**
             **/storage/logs/**
@@ -177,6 +168,7 @@ jobs:
             **/.env
             **/.env.*
             **/.phpunit.cache/**
+            **/vendor/**
             **/tests/**
             **/storage/cache/**
             **/storage/logs/**
