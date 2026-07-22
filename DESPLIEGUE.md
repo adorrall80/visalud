@@ -49,6 +49,34 @@ Si existe un proxy inverso, este debe reemplazar y controlar `X-Forwarded-Proto`
 
 Las migraciones no se revierten manualmente en producción. Ante un fallo se restaura el respaldo completo.
 
+## 4.1 CI/CD con GitHub Actions y FTP
+
+El workflow `.github/workflows/deploy-ftp.yml` ejecuta pruebas en `master`, `develop`, `feature/**` y pull requests. El despliegue por FTP se ejecuta solamente cuando se publica en `master`.
+
+Configurar estos secretos en GitHub, en `Settings > Secrets and variables > Actions`:
+
+```text
+FTP_SERVER=ftp.ejemplo.cl
+FTP_USERNAME=usuario_ftp
+FTP_PASSWORD=clave_ftp
+FTP_PRODUCTION_DIR=./public_html/
+FTP_TESTING_DIR=./pruebas/
+```
+
+`FTP_PRODUCTION_DIR` y `FTP_TESTING_DIR` deben apuntar a carpetas raíz del proyecto en el hosting. En cada entorno, la raíz web del dominio o subdominio debe quedar configurada hacia su carpeta `public/` interna.
+
+Si el hosting solo permite publicar directamente en `public_html` y no permite apuntar el dominio a `public/`, no se debe subir la raíz completa del proyecto a `public_html`, porque quedarían expuestos archivos privados. En ese caso hay que usar una estructura separada, por ejemplo una carpeta privada para la aplicación y `public_html` solo con el contenido público.
+
+El workflow no sube `.env`, `.env.*`, `.git`, `.github`, `tests`, cachés, logs ni `storage/documentos`. El archivo `.env` de producción y la carpeta `storage/documentos` deben mantenerse en el servidor.
+
+Después de cada despliegue, ejecutar en el hosting:
+
+```text
+php console migrate
+php console db:seed
+php console app:check --production
+```
+
 ## 5. Respaldos y restauración
 
 Respaldar diariamente como una misma unidad:
