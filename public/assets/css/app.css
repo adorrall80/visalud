@@ -119,9 +119,9 @@ h2 { margin-bottom: .45rem; letter-spacing: -.025em; }
 .invitation-accept { width: 100%; }
 .avatar { display: grid; place-items: center; flex: 0 0 42px; height: 42px; color: #fff; background: #4a8877; border-radius: 50%; font-weight: 800; }
 .avatar--family { border-radius: 12px; }
-.member-row > div:nth-child(2) { display: grid; flex: 1; }
-.member-role-form { display: flex; align-items: center; gap: .45rem; }
-.member-role-form select { padding: .52rem .65rem; border: 1px solid #cddcd7; border-radius: .65rem; color: #193a32; background: #fbfdfc; }
+.member-row > div:nth-child(2) { display: grid; flex: 1; min-width: 0; }
+.member-role-form { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: .55rem; margin-left: auto; }
+.member-role-form select { min-width: 150px; padding: .52rem .65rem; border: 1px solid #cddcd7; border-radius: .65rem; color: #193a32; background: #fbfdfc; }
 .badge { padding: .3rem .55rem; border-radius: 2rem; color: #2c6757 !important; background: #e6f3ee; font-size: .75rem !important; font-weight: 750; }
 .two-column { display: grid; grid-template-columns: 1.25fr .75fr; gap: 1rem; }
 .empty-state { display: grid; justify-items: center; max-width: 620px; margin: 4rem auto; padding: 3rem; text-align: center; border: 1px dashed #c9dbd4; border-radius: 1.25rem; background: rgba(255,255,255,.62); }

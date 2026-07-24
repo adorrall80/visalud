@@ -17,8 +17,7 @@
                     <form class="member-role-form" method="post" action="/familias/integrantes/<?= $view->escape($integrante['id']) ?>/rol">
                         <?= $view->csrfField() ?>
                         <input type="hidden" name="_method" value="PUT">
-                        <label class="sr-only" for="rol-integrante-<?= $view->escape($integrante['id']) ?>">Rol de <?= $view->escape($integrante['nombre']) ?></label>
-                        <select id="rol-integrante-<?= $view->escape($integrante['id']) ?>" name="rol">
+                        <select name="rol" aria-label="Rol de <?= $view->escape($integrante['nombre']) ?>">
                             <option value="FAMILIAR" <?= $integrante['rol_codigo']==='FAMILIAR'?'selected':'' ?>>Familiar</option>
                             <option value="ADMINISTRADOR" <?= $integrante['rol_codigo']==='ADMINISTRADOR'?'selected':'' ?>>Administrador</option>
                         </select>
