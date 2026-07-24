@@ -95,6 +95,38 @@ final class DocumentoController
         }
     }
 
+    public function edit(Request $request, string $id): Response
+    {
+        $document = $this->documents->findForFamily((int) $id, $this->familyId());
+        if ($document === null || !$this->personContext->matches((int) $document['persona_id'])) { return $this->contextMismatch(); }
+        $old = $this->session->flashed('old', []);
+        $document = $old === [] ? $document : [...$document, ...$old];
+        return Response::html($this->form($document, $this->personContext->active() ?? ['id' => $document['persona_id']], true));
+    }
+
+    public function update(Request $request, string $id): Response
+    {
+        $document = $this->documents->findForFamily((int) $id, $this->familyId());
+        if ($document === null || !$this->personContext->matches((int) $document['persona_id'])) { return $this->contextMismatch(); }
+        $data = $request->all();
+        $data['persona_id'] = (int) $document['persona_id'];
+        if (!$this->validator->validate($data, [
+            'persona_id' => ['required', 'integer'], 'atencion_id' => ['integer'],
+            'tipo_id' => ['required', 'integer'], 'nombre' => ['string', 'maxLength:255'], 'fecha_documento' => ['date'],
+        ])) {
+            $this->session->flash('errors', $this->validator->errors()); $this->session->flash('old', $data);
+            return Response::redirect('/documentos/' . (int) $id . '/edit');
+        }
+        try {
+            $this->documents->update((int) $id, $this->familyId(), $data, $request->file('archivo'));
+            $this->session->flash('success', 'Documento actualizado correctamente.');
+            return Response::redirect('/documentos');
+        } catch (\InvalidArgumentException $exception) {
+            $this->session->flash('errors', ['general' => [$exception->getMessage()]]); $this->session->flash('old', $data);
+            return Response::redirect('/documentos/' . (int) $id . '/edit');
+        }
+    }
+
     public function download(Request $request, string $id): Response
     {
         $document = $this->documents->downloadForFamily((int) $id, $this->familyId());
@@ -128,10 +160,10 @@ final class DocumentoController
         return Response::redirect('/documentos');
     }
 
-    private function form(array $document, array $person): string
+    private function form(array $document, array $person, bool $editing = false): string
     {
         return $this->view->render('documentos/form', [
-            'title' => 'Cargar documento', 'documento' => $document, 'errors' => $this->session->flashed('errors', []),
+            'title' => $editing ? 'Editar documento' : 'Cargar documento', 'documento' => $document, 'editing' => $editing, 'errors' => $this->session->flashed('errors', []),
             'personaActiva' => $person, 'tipos' => $this->documents->types(),
             'maxUploadMb' => (int) env('MAX_UPLOAD_MB', 10),
         ]);

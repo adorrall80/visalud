@@ -120,6 +120,50 @@ final class DocumentServiceTest extends TestCase
         self::assertFileDoesNotExist($absolutePath);
     }
 
+    public function testUpdatesDocumentMetadataWithoutReplacingStoredFile(): void
+    {
+        $config = require dirname(__DIR__, 2) . '/config/filesystems.php';
+        $directory = rtrim($config['documents'], '/\\') . DIRECTORY_SEPARATOR . 'tests';
+        if (!is_dir($directory)) {
+            mkdir($directory, 0775, true);
+        }
+        $oldPath = $directory . DIRECTORY_SEPARATOR . bin2hex(random_bytes(8)) . '.pdf';
+        file_put_contents($oldPath, '%PDF-1.4 old');
+        $this->temporaryFiles[] = $oldPath;
+
+        $statement = $this->database->prepare(
+            'INSERT INTO documentos
+             (persona_id, tipo_id, subido_por_usuario_id, nombre, archivo_ruta, mime_type)
+             VALUES (:persona_id, :tipo_id, :usuario_id, :nombre, :ruta, :mime)'
+        );
+        $statement->execute([
+            'persona_id' => $this->personId,
+            'tipo_id' => $this->typeId,
+            'usuario_id' => $this->userId,
+            'nombre' => 'Documento anterior',
+            'ruta' => 'tests/' . basename($oldPath),
+            'mime' => 'application/pdf',
+        ]);
+        $id = (int) $this->database->lastInsertId();
+
+        $updated = $this->documents->update($id, $this->familyId, [
+            'persona_id' => $this->personId,
+            'tipo_id' => $this->typeId,
+            'nombre' => 'Documento actualizado',
+            'fecha_documento' => '2026-07-24',
+            'descripcion' => 'Nueva descripción',
+        ], null);
+
+        self::assertTrue($updated);
+        self::assertFileExists($oldPath);
+        $document = $this->documents->findForFamily($id, $this->familyId);
+        self::assertSame('Documento actualizado', $document['nombre']);
+        self::assertSame('application/pdf', $document['mime_type']);
+        self::assertSame('tests/' . basename($oldPath), $document['archivo_ruta']);
+        self::assertSame('2026-07-24', $document['fecha_documento']);
+        self::assertSame('Nueva descripción', $document['descripcion']);
+    }
+
     private function temporaryFile(string $content): string
     {
         $file = tempnam(sys_get_temp_dir(), 'portal-doc-');

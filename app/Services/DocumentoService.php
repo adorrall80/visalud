@@ -119,6 +119,77 @@ final class DocumentoService
         }
     }
 
+    public function update(int $id, int $familyId, array $data, ?array $file): bool
+    {
+        $document = $this->findForFamily($id, $familyId);
+        if ($document === null) {
+            return false;
+        }
+        $this->validateRelations($familyId, $data);
+
+        $replacement = null;
+        if ($file !== null && ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+            if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                throw new \InvalidArgumentException('No fue posible recibir el archivo nuevo.');
+            }
+            if (!is_uploaded_file((string) ($file['tmp_name'] ?? ''))) {
+                throw new \InvalidArgumentException('El archivo recibido no es una carga válida.');
+            }
+            $inspected = $this->analyzeFile(
+                (string) $file['tmp_name'],
+                (string) ($file['name'] ?? ''),
+                (int) ($file['size'] ?? 0),
+            );
+            $relativePath = date('Y/m') . '/' . bin2hex(random_bytes(20)) . '.' . $inspected['extension'];
+            $absolutePath = $this->absolutePath($relativePath);
+            $directory = dirname($absolutePath);
+            if (!is_dir($directory) && !mkdir($directory, 0775, true) && !is_dir($directory)) {
+                throw new \RuntimeException('No fue posible preparar el almacenamiento de documentos.');
+            }
+            if (!move_uploaded_file((string) $file['tmp_name'], $absolutePath)) {
+                throw new \RuntimeException('No fue posible guardar el documento.');
+            }
+            $replacement = [
+                'relative_path' => $relativePath,
+                'absolute_path' => $absolutePath,
+                'mime_type' => $inspected['mime_type'],
+                'original_name' => (string) ($file['name'] ?? ''),
+            ];
+        }
+
+        try {
+            $statement = $this->database->prepare(
+                'UPDATE documentos
+                 SET atencion_id = :atencion_id, tipo_id = :tipo_id, nombre = :nombre,
+                     archivo_ruta = :archivo_ruta, mime_type = :mime_type,
+                     fecha_documento = :fecha_documento, descripcion = :descripcion
+                 WHERE id = :id'
+            );
+            $statement->execute([
+                'id' => $id,
+                'atencion_id' => empty($data['atencion_id']) ? null : (int) $data['atencion_id'],
+                'tipo_id' => (int) $data['tipo_id'],
+                'nombre' => $this->documentName($data['nombre'] ?? '', $replacement['original_name'] ?? (string) $document['nombre']),
+                'archivo_ruta' => $replacement['relative_path'] ?? (string) $document['archivo_ruta'],
+                'mime_type' => $replacement['mime_type'] ?? (string) $document['mime_type'],
+                'fecha_documento' => $this->nullable($data['fecha_documento'] ?? null),
+                'descripcion' => $this->nullable($data['descripcion'] ?? null),
+            ]);
+            if ($replacement !== null) {
+                $oldPath = $this->absolutePath((string) $document['archivo_ruta']);
+                if (is_file($oldPath)) {
+                    @unlink($oldPath);
+                }
+            }
+            return true;
+        } catch (\Throwable $exception) {
+            if ($replacement !== null && is_file($replacement['absolute_path'])) {
+                @unlink($replacement['absolute_path']);
+            }
+            throw $exception;
+        }
+    }
+
     public function downloadForFamily(int $id, int $familyId): ?array
     {
         $document = $this->findForFamily($id, $familyId);

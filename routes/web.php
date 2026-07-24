@@ -46,6 +46,8 @@ $router->put('/medicamentos/{id}', [MedicamentoController::class, 'update'])->mi
 $router->get('/documentos', [DocumentoController::class, 'index'])->middleware(['auth', 'family']);
 $router->get('/documentos/create', [DocumentoController::class, 'create'])->middleware(['auth', 'family']);
 $router->post('/documentos', [DocumentoController::class, 'store'])->middleware(['auth', 'family', 'csrf']);
+$router->get('/documentos/{id}/edit', [DocumentoController::class, 'edit'])->middleware(['auth', 'family']);
+$router->put('/documentos/{id}', [DocumentoController::class, 'update'])->middleware(['auth', 'family', 'csrf']);
 $router->get('/documentos/{id}/download', [DocumentoController::class, 'download'])->middleware(['auth', 'family']);
 $router->get('/documentos/{id}/preview', [DocumentoController::class, 'preview'])->middleware(['auth', 'family']);
 $router->delete('/documentos/{id}', [DocumentoController::class, 'destroy'])->middleware(['auth', 'family', 'csrf']);
