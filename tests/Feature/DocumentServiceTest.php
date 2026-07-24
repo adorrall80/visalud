@@ -116,7 +116,7 @@ final class DocumentServiceTest extends TestCase
         self::assertSame('Documento temporal.pdf', $download['download_name']);
         $this->database->exec("INSERT INTO familias (nombre) VALUES ('Familia temporal documentos')");
         self::assertNull($this->documents->downloadForFamily($id, (int) $this->database->lastInsertId()));
-        self::assertTrue($this->documents->delete($id, $this->familyId));
+        self::assertTrue($this->documents->delete($id, $this->familyId, $this->userId));
         self::assertFileDoesNotExist($absolutePath);
     }
 
@@ -162,6 +162,65 @@ final class DocumentServiceTest extends TestCase
         self::assertSame('tests/' . basename($oldPath), $document['archivo_ruta']);
         self::assertSame('2026-07-24', $document['fecha_documento']);
         self::assertSame('Nueva descripción', $document['descripcion']);
+    }
+
+    public function testOnlyUploaderOrAdministratorCanDeleteDocument(): void
+    {
+        $config = require dirname(__DIR__, 2) . '/config/filesystems.php';
+        $directory = rtrim($config['documents'], '/\\') . DIRECTORY_SEPARATOR . 'tests';
+        if (!is_dir($directory)) {
+            mkdir($directory, 0775, true);
+        }
+        $absolutePath = $directory . DIRECTORY_SEPARATOR . bin2hex(random_bytes(8)) . '.pdf';
+        file_put_contents($absolutePath, '%PDF-1.4 test');
+        $this->temporaryFiles[] = $absolutePath;
+        $relativePath = 'tests/' . basename($absolutePath);
+
+        $unique = bin2hex(random_bytes(6));
+        $user = $this->database->prepare(
+            'INSERT INTO usuarios (nombre, email, google_sub, email_verificado_at)
+             VALUES (:nombre, :email, :google_sub, UTC_TIMESTAMP())'
+        );
+        $user->execute([
+            'nombre' => 'Familiar sin permiso',
+            'email' => 'sin-permiso-' . $unique . '@example.test',
+            'google_sub' => 'sin-permiso-' . $unique,
+        ]);
+        $memberId = (int) $this->database->lastInsertId();
+        $this->database->prepare(
+            "INSERT INTO familia_usuarios (familia_id, usuario_id, tipo_rol_id)
+             VALUES (:familia_id, :usuario_id,
+                     (SELECT t.id FROM tipos t INNER JOIN procesos p ON p.id = t.proceso_id WHERE p.codigo = 'MIEMBRO_FAMILIA' AND t.codigo = 'FAMILIAR' LIMIT 1))"
+        )->execute(['familia_id' => $this->familyId, 'usuario_id' => $memberId]);
+
+        $statement = $this->database->prepare(
+            'INSERT INTO documentos
+             (persona_id, tipo_id, subido_por_usuario_id, nombre, archivo_ruta, mime_type)
+             VALUES (:persona_id, :tipo_id, :usuario_id, :nombre, :ruta, :mime)'
+        );
+        $statement->execute([
+            'persona_id' => $this->personId,
+            'tipo_id' => $this->typeId,
+            'usuario_id' => $this->userId,
+            'nombre' => 'Documento protegido',
+            'ruta' => $relativePath,
+            'mime' => 'application/pdf',
+        ]);
+        $id = (int) $this->database->lastInsertId();
+
+        $document = $this->documents->findForFamily($id, $this->familyId);
+        self::assertFalse($this->documents->canDelete($document, $this->familyId, $memberId));
+
+        try {
+            $this->documents->delete($id, $this->familyId, $memberId);
+            self::fail('Debía rechazar la eliminación por un familiar que no subió el documento.');
+        } catch (\RuntimeException $exception) {
+            self::assertStringContainsString('subió', $exception->getMessage());
+        }
+
+        self::assertTrue($this->documents->canDelete($document, $this->familyId, $this->userId));
+        self::assertTrue($this->documents->delete($id, $this->familyId, $this->userId));
+        self::assertFileDoesNotExist($absolutePath);
     }
 
     private function temporaryFile(string $content): string

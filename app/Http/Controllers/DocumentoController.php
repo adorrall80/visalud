@@ -32,7 +32,7 @@ final class DocumentoController
         $filters = $request->all();
         $filters['persona_id'] = (int) $person['id'];
         return Response::html($this->view->render('documentos/index', [
-            'title' => 'Documentos', 'documentos' => $this->documents->allForFamily($this->familyId(), $filters),
+            'title' => 'Documentos', 'documentos' => $this->documents->allForFamily($this->familyId(), $filters, 0, $this->userId()),
             'personaActiva' => $person, 'tipos' => $this->documents->types(), 'filters' => $filters,
         ]));
     }
@@ -155,8 +155,12 @@ final class DocumentoController
     {
         $document = $this->documents->findForFamily((int) $id, $this->familyId());
         if ($document === null || !$this->personContext->matches((int) $document['persona_id'])) { return $this->contextMismatch(); }
-        if (!$this->documents->delete((int) $id, $this->familyId())) { return Response::html('<h1>404</h1><p>Documento no encontrado.</p>', 404); }
-        $this->session->flash('success', 'Documento eliminado correctamente.');
+        try {
+            if (!$this->documents->delete((int) $id, $this->familyId(), $this->userId())) { return Response::html('<h1>404</h1><p>Documento no encontrado.</p>', 404); }
+            $this->session->flash('success', 'Documento eliminado correctamente.');
+        } catch (\Throwable $exception) {
+            $this->session->flash('error', $exception->getMessage());
+        }
         return Response::redirect('/documentos');
     }
 

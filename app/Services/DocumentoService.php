@@ -28,10 +28,26 @@ final class DocumentoService
         $this->maxBytes = max(1, (int) $config['max_upload_mb']) * 1024 * 1024;
     }
 
-    public function allForFamily(int $familyId, array $filters = [], int $limit = 0): array
+    public function allForFamily(int $familyId, array $filters = [], int $limit = 0, ?int $viewerId = null): array
     {
         $where = ['p.familia_id = :familia_id'];
         $parameters = ['familia_id' => $familyId];
+        $deletePermissionSql = '';
+        if ($viewerId !== null) {
+            $parameters['viewer_uploader_id'] = $viewerId;
+            $parameters['viewer_admin_id'] = $viewerId;
+            $parameters['viewer_family_id'] = $familyId;
+            $deletePermissionSql = ",
+                    CASE WHEN d.subido_por_usuario_id = :viewer_uploader_id OR EXISTS (
+                        SELECT 1 FROM familia_usuarios fu
+                        INNER JOIN tipos rol ON rol.id = fu.tipo_rol_id
+                        INNER JOIN procesos proceso ON proceso.id = rol.proceso_id
+                        WHERE fu.familia_id = :viewer_family_id
+                          AND fu.usuario_id = :viewer_admin_id
+                          AND proceso.codigo = 'MIEMBRO_FAMILIA'
+                          AND rol.codigo = 'ADMINISTRADOR'
+                    ) THEN 1 ELSE 0 END AS puede_eliminar";
+        }
         foreach (['persona_id' => 'd.persona_id', 'tipo_id' => 'd.tipo_id', 'atencion_id' => 'd.atencion_id'] as $filter => $column) {
             if (!empty($filters[$filter])) {
                 $where[] = "{$column} = :{$filter}";
@@ -41,7 +57,7 @@ final class DocumentoService
         $limitSql = $limit > 0 ? ' LIMIT ' . (int) $limit : '';
         $statement = $this->database->prepare(
             'SELECT d.*, p.nombre AS persona_nombre, t.nombre AS tipo_nombre, t.codigo AS tipo_codigo,
-                    u.nombre AS subido_por_nombre
+                    u.nombre AS subido_por_nombre' . $deletePermissionSql . '
              FROM documentos d
              INNER JOIN personas p ON p.id = d.persona_id
              INNER JOIN tipos t ON t.id = d.tipo_id
@@ -204,11 +220,14 @@ final class DocumentoService
         return $document;
     }
 
-    public function delete(int $id, int $familyId): bool
+    public function delete(int $id, int $familyId, int $userId): bool
     {
         $document = $this->findForFamily($id, $familyId);
         if ($document === null) {
             return false;
+        }
+        if (!$this->canDelete($document, $familyId, $userId)) {
+            throw new \RuntimeException('Solo quien subió el documento o un administrador puede eliminarlo.');
         }
         $statement = $this->database->prepare(
             'DELETE d FROM documentos d INNER JOIN personas p ON p.id = d.persona_id
@@ -223,6 +242,26 @@ final class DocumentoService
             return true;
         }
         return false;
+    }
+
+    public function canDelete(array $document, int $familyId, int $userId): bool
+    {
+        if ((int) $document['subido_por_usuario_id'] === $userId) {
+            return true;
+        }
+        $statement = $this->database->prepare(
+            "SELECT 1
+             FROM familia_usuarios fu
+             INNER JOIN tipos rol ON rol.id = fu.tipo_rol_id
+             INNER JOIN procesos proceso ON proceso.id = rol.proceso_id
+             WHERE fu.familia_id = :familia_id
+               AND fu.usuario_id = :usuario_id
+               AND proceso.codigo = 'MIEMBRO_FAMILIA'
+               AND rol.codigo = 'ADMINISTRADOR'
+             LIMIT 1"
+        );
+        $statement->execute(['familia_id' => $familyId, 'usuario_id' => $userId]);
+        return $statement->fetchColumn() !== false;
     }
 
     public function types(): array

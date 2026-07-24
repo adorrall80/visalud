@@ -6,11 +6,14 @@ namespace App\Services;
 
 use App\Core\Database;
 use App\Core\Session;
+use Firebase\JWT\JWT;
 use Google\Client;
 use PDO;
 
 final class GoogleAuthService
 {
+    private const GOOGLE_ID_TOKEN_LEEWAY_SECONDS = 300;
+
     private readonly PDO $database;
 
     public function __construct(
@@ -56,7 +59,7 @@ final class GoogleAuthService
             throw new \RuntimeException('Google no entregó un token de identidad.');
         }
 
-        $claims = $client->verifyIdToken($idToken);
+        $claims = $this->verifyIdToken($client, $idToken);
         if (!is_array($claims)) {
             throw new \RuntimeException('El token de identidad de Google no es válido.');
         }
@@ -114,6 +117,18 @@ final class GoogleAuthService
         $client->setScopes(['openid', 'email', 'profile']);
         $client->setAccessType('online');
         return $client;
+    }
+
+    private function verifyIdToken(Client $client, string $idToken): array|false
+    {
+        $previousLeeway = JWT::$leeway;
+        JWT::$leeway = max($previousLeeway, self::GOOGLE_ID_TOKEN_LEEWAY_SECONDS);
+
+        try {
+            return $client->verifyIdToken($idToken);
+        } finally {
+            JWT::$leeway = $previousLeeway;
+        }
     }
 
     private function upsertUser(string $googleSub, string $email, string $name, ?string $avatar): int
