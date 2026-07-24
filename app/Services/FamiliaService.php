@@ -141,6 +141,31 @@ final class FamiliaService
         ]);
     }
 
+    public function updateMemberRole(int $familyId, int $requesterId, int $memberUserId, string $roleCode): void
+    {
+        $this->requireAdministrator($familyId, $requesterId);
+        if (!in_array($roleCode, ['ADMINISTRADOR', 'FAMILIAR'], true)) {
+            throw new \InvalidArgumentException('El rol seleccionado no es válido.');
+        }
+        if ($requesterId === $memberUserId && $roleCode !== 'ADMINISTRADOR' && $this->administratorCount($familyId) <= 1) {
+            throw new \RuntimeException('La familia debe conservar al menos un administrador.');
+        }
+
+        $statement = $this->database->prepare(
+            'UPDATE familia_usuarios
+             SET tipo_rol_id = :tipo_rol_id
+             WHERE familia_id = :familia_id AND usuario_id = :usuario_id'
+        );
+        $statement->execute([
+            'familia_id' => $familyId,
+            'usuario_id' => $memberUserId,
+            'tipo_rol_id' => $this->roleId($roleCode),
+        ]);
+        if ($statement->rowCount() !== 1) {
+            throw new \RuntimeException('El integrante no pertenece a esta familia.');
+        }
+    }
+
     public function requireMembership(int $familyId, int $userId): array
     {
         $family = $this->findForUser($familyId, $userId);
@@ -244,5 +269,20 @@ final class FamiliaService
             throw new \RuntimeException("No existe el rol {$code}.");
         }
         return (int) $id;
+    }
+
+    private function administratorCount(int $familyId): int
+    {
+        $statement = $this->database->prepare(
+            "SELECT COUNT(*)
+             FROM familia_usuarios fu
+             INNER JOIN tipos t ON t.id = fu.tipo_rol_id
+             INNER JOIN procesos p ON p.id = t.proceso_id
+             WHERE fu.familia_id = :familia_id
+               AND p.codigo = 'MIEMBRO_FAMILIA'
+               AND t.codigo = 'ADMINISTRADOR'"
+        );
+        $statement->execute(['familia_id' => $familyId]);
+        return (int) $statement->fetchColumn();
     }
 }

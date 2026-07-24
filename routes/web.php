@@ -19,6 +19,7 @@ $router->put('/familias/{id}/archivar', [FamiliaController::class, 'archive'])->
 $router->put('/familias/{id}/restaurar', [FamiliaController::class, 'restore'])->middleware(['auth', 'csrf']);
 $router->get('/familias/integrantes', [FamiliaController::class, 'members'])->middleware(['auth', 'family']);
 $router->post('/familias/integrantes', [FamiliaController::class, 'addMember'])->middleware(['auth', 'family', 'csrf']);
+$router->put('/familias/integrantes/{id}/rol', [FamiliaController::class, 'updateMemberRole'])->middleware(['auth', 'family', 'admin', 'csrf']);
 $router->post('/familias/invitaciones', [InvitacionController::class, 'create'])->middleware(['auth', 'family', 'admin', 'csrf']);
 $router->put('/familias/invitaciones/{id}/revocar', [InvitacionController::class, 'revoke'])->middleware(['auth', 'family', 'admin', 'csrf']);
 $router->get('/invitaciones/aceptar', [InvitacionController::class, 'show']);

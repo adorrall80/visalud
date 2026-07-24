@@ -118,6 +118,37 @@ final class FamilyAccessTest extends TestCase
         self::assertSame($before, $this->clinicalCounts($familyId));
     }
 
+    public function testAdministratorCanChangeMemberRoleButCannotLeaveFamilyWithoutAdministrator(): void
+    {
+        $context = $this->database->query(
+            "SELECT fu.familia_id, fu.usuario_id
+             FROM familia_usuarios fu
+             INNER JOIN usuarios u ON u.id = fu.usuario_id
+             INNER JOIN tipos t ON t.id = fu.tipo_rol_id
+             INNER JOIN familias f ON f.id = fu.familia_id
+             WHERE u.google_sub <> 'demo-google-sub-local'
+               AND t.codigo = 'ADMINISTRADOR'
+               AND f.archivada_at IS NULL
+             ORDER BY fu.familia_id LIMIT 1"
+        )->fetch();
+        self::assertIsArray($context);
+        $familyId = (int) $context['familia_id'];
+        $adminUserId = (int) $context['usuario_id'];
+
+        $this->families->addMemberByEmail($familyId, $adminUserId, $this->candidateEmail, 'FAMILIAR');
+        self::assertSame('FAMILIAR', $this->memberRole($familyId, $this->candidateUserId));
+
+        $this->families->updateMemberRole($familyId, $adminUserId, $this->candidateUserId, 'ADMINISTRADOR');
+        self::assertSame('ADMINISTRADOR', $this->memberRole($familyId, $this->candidateUserId));
+
+        $this->families->updateMemberRole($familyId, $adminUserId, $adminUserId, 'FAMILIAR');
+        self::assertSame('FAMILIAR', $this->memberRole($familyId, $adminUserId));
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('administrador');
+        $this->families->updateMemberRole($familyId, $this->candidateUserId, $this->candidateUserId, 'FAMILIAR');
+    }
+
     public function testArchiveRejectsUserWithoutMembership(): void
     {
         $familyId = (int) $this->database->query(
@@ -126,6 +157,18 @@ final class FamilyAccessTest extends TestCase
 
         $this->expectException(\RuntimeException::class);
         $this->families->archive($familyId, 0);
+    }
+
+    private function memberRole(int $familyId, int $userId): string
+    {
+        $statement = $this->database->prepare(
+            'SELECT t.codigo
+             FROM familia_usuarios fu
+             INNER JOIN tipos t ON t.id = fu.tipo_rol_id
+             WHERE fu.familia_id = :familia_id AND fu.usuario_id = :usuario_id'
+        );
+        $statement->execute(['familia_id' => $familyId, 'usuario_id' => $userId]);
+        return (string) $statement->fetchColumn();
     }
 
     private function clinicalCounts(int $familyId): array

@@ -75,6 +75,7 @@ h2 { margin-bottom: .45rem; letter-spacing: -.025em; }
 .field input, .field select { width: 100%; padding: .8rem .9rem; border: 1px solid #cddcd7; border-radius: .7rem; color: #193a32; background: #fbfdfc; outline: none; }
 .field input:focus, .field select:focus { border-color: #4a927e; box-shadow: 0 0 0 3px rgba(74,146,126,.14); }
 .field-error { color: #a12b2b; font-weight: 500; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .page-heading { display: flex; justify-content: space-between; align-items: end; margin-bottom: 1.5rem; }
 .page-heading h1 { font-size: clamp(2.1rem, 4vw, 3.4rem); }
 .list-stack { display: grid; gap: .75rem; }
@@ -119,6 +120,8 @@ h2 { margin-bottom: .45rem; letter-spacing: -.025em; }
 .avatar { display: grid; place-items: center; flex: 0 0 42px; height: 42px; color: #fff; background: #4a8877; border-radius: 50%; font-weight: 800; }
 .avatar--family { border-radius: 12px; }
 .member-row > div:nth-child(2) { display: grid; flex: 1; }
+.member-role-form { display: flex; align-items: center; gap: .45rem; }
+.member-role-form select { padding: .52rem .65rem; border: 1px solid #cddcd7; border-radius: .65rem; color: #193a32; background: #fbfdfc; }
 .badge { padding: .3rem .55rem; border-radius: 2rem; color: #2c6757 !important; background: #e6f3ee; font-size: .75rem !important; font-weight: 750; }
 .two-column { display: grid; grid-template-columns: 1.25fr .75fr; gap: 1rem; }
 .empty-state { display: grid; justify-items: center; max-width: 620px; margin: 4rem auto; padding: 3rem; text-align: center; border: 1px dashed #c9dbd4; border-radius: 1.25rem; background: rgba(255,255,255,.62); }

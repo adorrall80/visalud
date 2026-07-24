@@ -111,6 +111,30 @@ final class FamiliaController
         return Response::redirect('/familias/integrantes');
     }
 
+    public function updateMemberRole(Request $request, string $id): Response
+    {
+        $data = $request->all();
+        if (!$this->validator->validate($data, [
+            'rol' => ['required', 'in:ADMINISTRADOR,FAMILIAR'],
+        ])) {
+            $this->session->flash('errors', $this->validator->errors());
+            return Response::redirect('/familias/integrantes');
+        }
+
+        try {
+            $this->families->updateMemberRole(
+                (int) $this->session->get('family_id'),
+                (int) $this->session->get('user_id'),
+                (int) $id,
+                (string) $data['rol'],
+            );
+            $this->session->flash('success', 'Rol actualizado correctamente.');
+        } catch (\Throwable $exception) {
+            $this->session->flash('error', $exception->getMessage());
+        }
+        return Response::redirect('/familias/integrantes');
+    }
+
     public function archive(Request $request, string $id): Response
     {
         $familyId = (int) $id;

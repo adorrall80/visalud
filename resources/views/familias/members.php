@@ -13,7 +13,20 @@
                 <article class="member-row">
                     <div class="avatar"><?= $view->escape(mb_strtoupper(mb_substr($integrante['nombre'], 0, 1))) ?></div>
                     <div><strong><?= $view->escape($integrante['nombre']) ?></strong><span><?= $view->escape($integrante['email']) ?></span></div>
+                    <?php if($familia['rol_codigo']==='ADMINISTRADOR'): ?>
+                    <form class="member-role-form" method="post" action="/familias/integrantes/<?= $view->escape($integrante['id']) ?>/rol">
+                        <?= $view->csrfField() ?>
+                        <input type="hidden" name="_method" value="PUT">
+                        <label class="sr-only" for="rol-integrante-<?= $view->escape($integrante['id']) ?>">Rol de <?= $view->escape($integrante['nombre']) ?></label>
+                        <select id="rol-integrante-<?= $view->escape($integrante['id']) ?>" name="rol">
+                            <option value="FAMILIAR" <?= $integrante['rol_codigo']==='FAMILIAR'?'selected':'' ?>>Familiar</option>
+                            <option value="ADMINISTRADOR" <?= $integrante['rol_codigo']==='ADMINISTRADOR'?'selected':'' ?>>Administrador</option>
+                        </select>
+                        <button class="button button--compact" type="submit">Guardar rol</button>
+                    </form>
+                    <?php else: ?>
                     <span class="badge"><?= $view->escape($integrante['rol_nombre']) ?></span>
+                    <?php endif; ?>
                 </article>
             <?php endforeach; ?>
         </div>
