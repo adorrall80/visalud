@@ -107,7 +107,7 @@ final class DocumentServiceTest extends TestCase
         self::assertSame('image/jpeg', $prepared['mime_type']);
         self::assertSame('jpg', $prepared['extension']);
         self::assertTrue($prepared['temporary']);
-        self::assertLessThanOrEqual(51200, filesize($prepared['path']));
+        self::assertLessThanOrEqual(50 * 1024, filesize($prepared['path']));
         $this->temporaryFiles[] = $prepared['path'];
     }
 

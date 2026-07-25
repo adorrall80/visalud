@@ -12,8 +12,9 @@ final class DocumentoService
     private readonly PDO $database;
     private readonly string $storagePath;
     private readonly int $maxBytes;
-    private const TARGET_IMAGE_BYTES = 51200;
-    private const MAX_IMAGE_SIDE = 1400;
+    private readonly bool $compressImages;
+    private readonly int $targetImageBytes;
+    private readonly int $maxImageSide;
 
     private const MIME_EXTENSIONS = [
         'application/pdf' => ['pdf'],
@@ -28,6 +29,9 @@ final class DocumentoService
         $config = require dirname(__DIR__, 2) . '/config/filesystems.php';
         $this->storagePath = rtrim((string) $config['documents'], '/\\');
         $this->maxBytes = max(1, (int) $config['max_upload_mb']) * 1024 * 1024;
+        $this->compressImages = (bool) ($config['image_compression_enabled'] ?? true);
+        $this->targetImageBytes = max(10, (int) ($config['image_target_kb'] ?? 50)) * 1024;
+        $this->maxImageSide = max(320, (int) ($config['image_max_side'] ?? 1400));
     }
 
     public function allForFamily(int $familyId, array $filters = [], int $limit = 0, ?int $viewerId = null): array
@@ -308,7 +312,7 @@ final class DocumentoService
             'extension' => (string) $inspected['extension'],
             'temporary' => false,
         ];
-        if (!str_starts_with($prepared['mime_type'], 'image/')) {
+        if (!$this->compressImages || !str_starts_with($prepared['mime_type'], 'image/')) {
             return $prepared;
         }
 
@@ -341,7 +345,7 @@ final class DocumentoService
 
         $width = imagesx($source);
         $height = imagesy($source);
-        $baseScale = min(1.0, self::MAX_IMAGE_SIDE / max($width, $height));
+        $baseScale = min(1.0, $this->maxImageSide / max($width, $height));
         $qualities = [82, 72, 62, 52, 42, 35];
         $scale = $baseScale;
         $bestPath = null;
@@ -373,7 +377,7 @@ final class DocumentoService
                     } else {
                         @unlink($path);
                     }
-                    if ($size <= self::TARGET_IMAGE_BYTES) {
+                    if ($size <= $this->targetImageBytes) {
                         imagedestroy($canvas);
                         imagedestroy($source);
                         return $bestPath;
