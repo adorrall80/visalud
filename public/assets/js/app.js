@@ -1,4 +1,25 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const copyTextToClipboard = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+            return true;
+        }
+
+        const temporary = document.createElement('textarea');
+        temporary.value = text;
+        temporary.setAttribute('readonly', '');
+        temporary.style.position = 'fixed';
+        temporary.style.left = '-9999px';
+        temporary.style.top = '0';
+        document.body.appendChild(temporary);
+        temporary.focus();
+        temporary.select();
+        temporary.setSelectionRange(0, temporary.value.length);
+        const copied = document.execCommand('copy');
+        temporary.remove();
+        return copied;
+    };
+
     const toggle = document.querySelector('.nav-toggle');
     const navigation = document.querySelector('#main-navigation');
 
@@ -91,12 +112,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!input) return;
             let copied = false;
             try {
-                await navigator.clipboard.writeText(input.value);
-                copied = true;
+                copied = await copyTextToClipboard(input.value);
             } catch (_) {
                 input.focus();
                 input.select();
-                copied = document.execCommand('copy');
             }
             if (feedback) feedback.textContent = copied ? 'Enlace copiado. Ya puedes compartirlo.' : 'Selecciona el enlace y cópialo manualmente.';
             button.textContent = copied ? 'Copiado' : 'Copiar enlace';
@@ -106,16 +125,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-copy-text]').forEach((button) => {
         button.addEventListener('click', async () => {
             const input = document.getElementById(button.dataset.copyText);
-            const feedback = document.querySelector(`[data-copy-text-feedback="${button.dataset.copyText}"]`);
+            const feedback = button.closest('dialog')?.querySelector('[data-copy-text-feedback]');
             if (!input) return;
             let copied = false;
             try {
-                await navigator.clipboard.writeText(input.value);
-                copied = true;
+                copied = await copyTextToClipboard(input.value);
             } catch (_) {
                 input.focus();
                 input.select();
-                copied = document.execCommand('copy');
             }
             if (feedback) feedback.textContent = copied ? 'Texto copiado. Ya puedes pegarlo en tu IA.' : 'Selecciona el texto y cópialo manualmente.';
             button.textContent = copied ? 'Copiado' : 'Copiar texto';
