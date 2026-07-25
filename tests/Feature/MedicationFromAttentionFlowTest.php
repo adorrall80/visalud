@@ -107,7 +107,12 @@ final class MedicationFromAttentionFlowTest extends TestCase
         self::assertStringContainsString('25 mg, 1 comprimido', $html);
         self::assertStringContainsString('Documentos de esta atención (1)', $html);
         self::assertStringContainsString('Informe asociado temporal.png', $html);
+        self::assertStringContainsString('data-appointment-modal="ai-prompt-modal"', $html);
+        self::assertStringContainsString('Actúa como asistente de salud familiar', $html);
+        self::assertStringContainsString('Medicamento de flujo temporal', $html);
+        self::assertStringContainsString('/documentos/' . $documentId . '/edit', $html);
         self::assertStringContainsString('/documentos/' . $documentId . '/download', $html);
+        self::assertStringContainsString('action="/documentos/' . $documentId . '"', $html);
         self::assertStringContainsString('/documentos/create?atencion_id=' . $attentionId, $html);
         self::assertStringContainsString('data-appointment-modal="document-preview-' . $documentId . '"', $html);
         self::assertStringContainsString('id="document-preview-' . $documentId . '"', $html);
@@ -124,6 +129,36 @@ final class MedicationFromAttentionFlowTest extends TestCase
         self::assertStringContainsString('Tipo: Informe', $documentHtml);
         self::assertStringContainsString('Formato: Imagen PNG', $documentHtml);
         self::assertStringContainsString('data-appointment-modal="document-preview-' . $documentId . '"', $documentHtml);
+    }
+
+    public function testAttentionDocumentActionsHideDeleteForNonUploaderFamilyMember(): void
+    {
+        $context = $this->database->query(
+            'SELECT p.id persona_id, p.familia_id, fu.usuario_id
+             FROM personas p INNER JOIN familia_usuarios fu ON fu.familia_id = p.familia_id
+             ORDER BY p.id DESC LIMIT 1'
+        )->fetch();
+        self::assertIsArray($context);
+        $personId = (int) $context['persona_id'];
+        $familyId = (int) $context['familia_id'];
+        $uploaderId = (int) $context['usuario_id'];
+        $memberId = $this->familyMember($familyId);
+        $attentionId = $this->attention($personId, $uploaderId);
+        $documentId = $this->document($personId, $attentionId, $uploaderId);
+        $this->session->put('user_id', $memberId);
+        $this->session->put('family_id', $familyId);
+        $this->context->select($personId);
+        $view = new View(dirname(__DIR__, 2) . '/resources/views', $this->session, $this->context);
+        $controller = new AtencionController(
+            new AtencionService($this->connection), $this->session, $view, new Validator(), $this->context,
+            new MedicamentoService($this->connection), new DocumentoService($this->connection),
+        );
+
+        $html = $controller->show(new Request(), (string) $attentionId)->content();
+
+        self::assertStringContainsString('/documentos/' . $documentId . '/edit', $html);
+        self::assertStringContainsString('/documentos/' . $documentId . '/download', $html);
+        self::assertStringNotContainsString('action="/documentos/' . $documentId . '"', $html);
     }
 
     private function attention(int $personId, int $userId): int
@@ -158,6 +193,27 @@ final class MedicationFromAttentionFlowTest extends TestCase
             'ruta' => 'tests/' . bin2hex(random_bytes(12)) . '.png',
         ]);
         return (int) $this->database->lastInsertId();
+    }
+
+    private function familyMember(int $familyId): int
+    {
+        $unique = bin2hex(random_bytes(6));
+        $statement = $this->database->prepare(
+            'INSERT INTO usuarios (nombre, email, google_sub, email_verificado_at)
+             VALUES (:nombre, :email, :google_sub, UTC_TIMESTAMP())'
+        );
+        $statement->execute([
+            'nombre' => 'Familiar temporal',
+            'email' => 'familiar-temporal-' . $unique . '@example.test',
+            'google_sub' => 'familiar-temporal-' . $unique,
+        ]);
+        $memberId = (int) $this->database->lastInsertId();
+        $this->database->prepare(
+            "INSERT INTO familia_usuarios (familia_id, usuario_id, tipo_rol_id)
+             VALUES (:familia_id, :usuario_id,
+                     (SELECT t.id FROM tipos t INNER JOIN procesos p ON p.id = t.proceso_id WHERE p.codigo = 'MIEMBRO_FAMILIA' AND t.codigo = 'FAMILIAR' LIMIT 1))"
+        )->execute(['familia_id' => $familyId, 'usuario_id' => $memberId]);
+        return $memberId;
     }
 
     private function catalogId(string $table, string $code): int

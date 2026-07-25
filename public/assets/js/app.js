@@ -98,4 +98,23 @@ document.addEventListener('DOMContentLoaded', () => {
             button.textContent = copied ? 'Copiado' : 'Copiar enlace';
         });
     });
+
+    document.querySelectorAll('[data-copy-text]').forEach((button) => {
+        button.addEventListener('click', async () => {
+            const input = document.getElementById(button.dataset.copyText);
+            const feedback = document.querySelector(`[data-copy-text-feedback="${button.dataset.copyText}"]`);
+            if (!input) return;
+            let copied = false;
+            try {
+                await navigator.clipboard.writeText(input.value);
+                copied = true;
+            } catch (_) {
+                input.focus();
+                input.select();
+                copied = document.execCommand('copy');
+            }
+            if (feedback) feedback.textContent = copied ? 'Texto copiado. Ya puedes pegarlo en tu IA.' : 'Selecciona el texto y cópialo manualmente.';
+            button.textContent = copied ? 'Copiado' : 'Copiar texto';
+        });
+    });
 });

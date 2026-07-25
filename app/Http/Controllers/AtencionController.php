@@ -9,6 +9,7 @@ use App\Core\Response;
 use App\Core\Session;
 use App\Core\Validator;
 use App\Core\View;
+use App\Services\AtencionFichaAiPromptService;
 use App\Services\AtencionFichaPdfService;
 use App\Services\AtencionService;
 use App\Services\DocumentoService;
@@ -26,6 +27,7 @@ final class AtencionController
         private readonly MedicamentoService $medications,
         private readonly DocumentoService $documents,
         private readonly ?AtencionFichaPdfService $attentionPdfs = null,
+        private readonly ?AtencionFichaAiPromptService $attentionAiPrompts = null,
     ) {
     }
 
@@ -82,17 +84,21 @@ final class AtencionController
         $attention = $this->attentions->findForFamily((int) $id, $this->familyId());
         if ($attention === null) { return Response::html('<h1>404</h1><p>Atención no encontrada.</p>', 404); }
         if (!$this->personContext->matches((int) $attention['persona_id'])) { return $this->contextMismatch(); }
+        $medications = $this->medications->allForFamily($this->familyId(), [
+            'persona_id' => (int) $attention['persona_id'],
+            'atencion_id' => (int) $attention['id'],
+        ]);
+        $documents = $this->documents->allForFamily($this->familyId(), [
+            'persona_id' => (int) $attention['persona_id'],
+            'atencion_id' => (int) $attention['id'],
+        ], 0, $this->userId());
+        $aiPrompt = ($this->attentionAiPrompts ?? new AtencionFichaAiPromptService())->render($attention, $medications, $documents);
         return Response::html($this->view->render('atenciones/show', [
             'title' => $attention['tipo_nombre'],
             'atencion' => $attention,
-            'medicamentos' => $this->medications->allForFamily($this->familyId(), [
-                'persona_id' => (int) $attention['persona_id'],
-                'atencion_id' => (int) $attention['id'],
-            ]),
-            'documentos' => $this->documents->allForFamily($this->familyId(), [
-                'persona_id' => (int) $attention['persona_id'],
-                'atencion_id' => (int) $attention['id'],
-            ]),
+            'medicamentos' => $medications,
+            'documentos' => $documents,
+            'promptIa' => $aiPrompt,
         ]));
     }
 

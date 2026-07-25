@@ -361,6 +361,8 @@ h2 { margin-bottom: .45rem; letter-spacing: -.025em; }
 .document-added-modal { --event-color: #426f8a; }
 .document-added-modal .medication-added-summary { background: #edf5f8; }
 .document-added-modal .medication-added-summary__icon { background: #426f8a; }
+.ai-prompt-modal { --event-color: #6b7454; width: min(860px,calc(100% - 2rem)); }
+.ai-prompt-text { width: 100%; min-height: 46vh; resize: vertical; padding: 1rem; border: 1px solid #d7e3df; border-radius: .8rem; color: #23463e; background: #f8fbfa; font: 500 .92rem/1.55 ui-monospace,SFMono-Regular,Consolas,monospace; }
 .medication-added-summary { display: flex; align-items: center; gap: 1rem; padding: 1rem; border-radius: .9rem; background: #edf7f3; }
 .medication-added-summary__icon { display: grid; place-items: center; flex: 0 0 52px; height: 52px; border-radius: 50%; color: #fff; background: #2f806b; font-size: 1.4rem; font-weight: 900; }
 .medication-added-summary > div { display: grid; gap: .2rem; }
