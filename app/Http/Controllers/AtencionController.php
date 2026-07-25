@@ -122,7 +122,7 @@ final class AtencionController
         }, $documents);
 
         $generator = $this->attentionPdfs ?? new AtencionFichaPdfService();
-        $content = $generator->render($attention, $medications, $documents);
+        $content = $generator->render($attention, $medications, $documents, (string) $request->input('texto_final', ''));
         return Response::downloadContent($content, $generator->filename($attention), 'application/pdf');
     }
 

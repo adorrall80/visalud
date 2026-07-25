@@ -16,7 +16,7 @@ final class AtencionFichaAiPromptService
             '- Hallazgos, diagnóstico o resultado.',
             '- Indicaciones y próximos pasos.',
             '- Medicamentos asociados, dosis, frecuencia y horarios si existen.',
-            '- Documentos adjuntos relevantes y qué aportan según su descripción.',
+            '- Documentos adjuntos: solo menciona qué documentos hay y los datos registrados.',
             '- Señales de alerta o temas que conviene consultar con un profesional, sin inventar información.',
             '',
             'No reemplaces la evaluación médica. Si falta información, indícalo explícitamente.',
@@ -64,6 +64,7 @@ final class AtencionFichaAiPromptService
         if ($documents === []) {
             $lines[] = 'No hay documentos asociados a esta atención.';
         } else {
+            $lines[] = 'Doc adjuntos:';
             foreach ($documents as $index => $document) {
                 $date = $document['fecha_documento'] ?: substr((string) ($document['created_at'] ?? ''), 0, 10);
                 $lines[] = ($index + 1) . '. ' . $this->value($document['nombre'] ?? null);

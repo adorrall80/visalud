@@ -105,6 +105,24 @@ final class AttentionPdfTest extends TestCase
         self::assertGreaterThanOrEqual(4, $this->pdfPageCount($response->content()));
     }
 
+    public function testPdfRecordCanAppendFinalText(): void
+    {
+        $connection = Database::connect(require dirname(__DIR__, 2) . '/config/database.php');
+        $this->database = $connection->connection();
+        $this->database->beginTransaction();
+        $source = $this->source();
+        $attentionId = $this->attention((int) $source['persona_id'], (int) $source['usuario_id']);
+        $_POST['texto_final'] = 'Texto final agregado antes de generar la ficha.';
+
+        $response = $this->controller($connection, $source)->fichaPdf(new Request(), (string) $attentionId);
+
+        unset($_POST['texto_final']);
+        self::assertSame(200, $response->status());
+        self::assertSame('application/pdf', $response->header('Content-Type'));
+        self::assertStringStartsWith('%PDF', $response->content());
+        self::assertSame(3, $this->pdfPageCount($response->content()));
+    }
+
     public function testPdfRecordRejectsAttentionFromAnotherFamily(): void
     {
         $connection = Database::connect(require dirname(__DIR__, 2) . '/config/database.php');

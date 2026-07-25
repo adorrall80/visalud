@@ -2,10 +2,19 @@
 <header class="profile-header attention-header">
     <div class="attention-type-icon"><?= $view->escape(mb_substr($atencion['tipo_nombre'],0,1)) ?></div>
     <div class="profile-header__main"><p class="eyebrow"><?= $view->escape($atencion['tipo_nombre']) ?></p><h1><?= $view->escape($atencion['persona_nombre']) ?></h1><p><?= $view->escape($atencion['fecha_hora_formato']) ?> · <?= $view->escape($atencion['estado_nombre']) ?></p></div>
-    <a class="button button--compact button--secondary" href="/atenciones/<?= $view->escape($atencion['id']) ?>/ficha-pdf">Generar ficha PDF</a>
+    <button class="button button--compact button--secondary" type="button" data-appointment-modal="pdf-note-modal">Generar ficha PDF</button>
     <button class="button button--compact button--secondary" type="button" data-appointment-modal="ai-prompt-modal">Prompt IA</button>
     <a class="button button--compact button--secondary" href="/atenciones/<?= $view->escape($atencion['id']) ?>/edit">Editar atención</a>
 </header>
+
+<dialog class="appointment-modal pdf-note-modal" id="pdf-note-modal" aria-labelledby="pdf-note-title">
+    <div class="appointment-modal__header"><div><span class="appointment-modal__status"><i></i>Ficha PDF</span><h2 id="pdf-note-title">Info adicional</h2></div><form method="dialog"><button type="submit" aria-label="Cerrar generación de PDF">×</button></form></div>
+    <form method="post" action="/atenciones/<?= $view->escape($atencion['id']) ?>/ficha-pdf">
+        <?= $view->csrfField() ?>
+        <div class="appointment-modal__body"><label class="ai-prompt-label" for="pdf-final-text">Texto copiado o escrito</label><textarea class="ai-prompt-text" id="pdf-final-text" name="texto_final" placeholder="Pega o escribe aquí el texto que se agregará bajo el título Info adicional al final del PDF. Si lo dejas vacío, se genera la ficha sin esta página."></textarea></div>
+        <footer class="appointment-modal__footer"><button class="button button--secondary" type="button" data-close-dialog>Cerrar</button><button class="button button--primary" type="submit">Generar PDF</button></footer>
+    </form>
+</dialog>
 
 <dialog class="appointment-modal ai-prompt-modal" id="ai-prompt-modal" aria-labelledby="ai-prompt-title">
     <div class="appointment-modal__header"><div><span class="appointment-modal__status"><i></i>Texto para IA</span><h2 id="ai-prompt-title">Prompt IA</h2></div><form method="dialog"><button type="submit" aria-label="Cerrar prompt IA">×</button></form></div>

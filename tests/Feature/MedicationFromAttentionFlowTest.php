@@ -107,9 +107,15 @@ final class MedicationFromAttentionFlowTest extends TestCase
         self::assertStringContainsString('25 mg, 1 comprimido', $html);
         self::assertStringContainsString('Documentos de esta atención (1)', $html);
         self::assertStringContainsString('Informe asociado temporal.png', $html);
+        self::assertStringContainsString('data-appointment-modal="pdf-note-modal"', $html);
+        self::assertStringContainsString('Info adicional', $html);
+        self::assertStringContainsString('Texto copiado o escrito', $html);
+        self::assertStringContainsString('name="texto_final"', $html);
         self::assertStringContainsString('data-appointment-modal="ai-prompt-modal"', $html);
         self::assertStringContainsString('Actúa como asistente de salud familiar', $html);
         self::assertStringContainsString('Medicamento de flujo temporal', $html);
+        self::assertStringContainsString('Doc adjuntos:', $html);
+        self::assertStringContainsString('Informe asociado temporal.png', $html);
         self::assertStringContainsString('/documentos/' . $documentId . '/edit', $html);
         self::assertStringContainsString('/documentos/' . $documentId . '/download', $html);
         self::assertStringContainsString('action="/documentos/' . $documentId . '"', $html);

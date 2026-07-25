@@ -76,6 +76,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    document.querySelectorAll('[data-close-dialog]').forEach((button) => {
+        button.addEventListener('click', () => button.closest('dialog')?.close());
+    });
+
     document.querySelectorAll('dialog[data-auto-open-modal]').forEach((dialog) => {
         if (typeof dialog.showModal === 'function' && !dialog.open) dialog.showModal();
     });

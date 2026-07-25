@@ -12,7 +12,7 @@ final class AtencionFichaPdfService
 {
     private const MAX_MERGED_PDF_BYTES = 25 * 1024 * 1024;
 
-    public function render(array $attention, array $medications, array $documents): string
+    public function render(array $attention, array $medications, array $documents, string $finalText = ''): string
     {
         $temporaryFiles = [];
         $sources = [];
@@ -31,6 +31,10 @@ final class AtencionFichaPdfService
                 if ($pdfPath !== null) {
                     $sources[] = $pdfPath;
                 }
+            }
+
+            if (trim($finalText) !== '') {
+                $sources[] = $this->temporaryPdf($this->renderHtml($this->finalTextHtml($finalText)), $temporaryFiles);
             }
 
             return $this->mergePdfSources($sources, $basePdf);
@@ -170,6 +174,14 @@ final class AtencionFichaPdfService
         }
 
         return $html . '</section></body></html>';
+    }
+
+    private function finalTextHtml(string $text): string
+    {
+        return '<!doctype html><html lang="es"><head><meta charset="UTF-8"><style>' . $this->css() . '</style></head><body>'
+            . '<header><p class="eyebrow">Ficha de atención</p><h1>Info adicional</h1></header>'
+            . '<section class="card"><div class="block"><p>' . nl2br($this->escape($text)) . '</p></div></section>'
+            . '</body></html>';
     }
 
     private function imageDataUri(array $document): ?string
