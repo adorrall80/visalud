@@ -2,6 +2,7 @@
 <header class="profile-header attention-header">
     <div class="attention-type-icon"><?= $view->escape(mb_substr($atencion['tipo_nombre'],0,1)) ?></div>
     <div class="profile-header__main"><p class="eyebrow"><?= $view->escape($atencion['tipo_nombre']) ?></p><h1><?= $view->escape($atencion['persona_nombre']) ?></h1><p><?= $view->escape($atencion['fecha_hora_formato']) ?> · <?= $view->escape($atencion['estado_nombre']) ?></p></div>
+    <a class="button button--compact button--secondary" href="/atenciones/<?= $view->escape($atencion['id']) ?>/ficha-pdf">Generar ficha PDF</a>
     <a class="button button--compact button--secondary" href="/atenciones/<?= $view->escape($atencion['id']) ?>/edit">Editar atención</a>
 </header>
 

@@ -34,6 +34,8 @@ $router->post('/persona-activa', [PersonaContextController::class, 'select'])->m
 $router->get('/atenciones', [AtencionController::class, 'index'])->middleware(['auth', 'family']);
 $router->get('/atenciones/create', [AtencionController::class, 'create'])->middleware(['auth', 'family']);
 $router->post('/atenciones', [AtencionController::class, 'store'])->middleware(['auth', 'family', 'csrf']);
+$router->get('/atenciones/{id}/ficha-pdf', [AtencionController::class, 'fichaPdf'])->middleware(['auth', 'family']);
+$router->get('/atenciones/{id}/ficha.pdf', [AtencionController::class, 'fichaPdf'])->middleware(['auth', 'family']);
 $router->get('/atenciones/{id}', [AtencionController::class, 'show'])->middleware(['auth', 'family']);
 $router->get('/atenciones/{id}/edit', [AtencionController::class, 'edit'])->middleware(['auth', 'family']);
 $router->put('/atenciones/{id}', [AtencionController::class, 'update'])->middleware(['auth', 'family', 'csrf']);

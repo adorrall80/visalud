@@ -991,3 +991,60 @@ Permitir que un administrador genere y copie un enlace de un solo uso. La person
 ### Entregable
 
 Flujo seguro para copiar un enlace, compartirlo y permitir que una persona se una a la familia con la cuenta Google que elija.
+
+## 25. Etapa 19: ficha PDF de atención
+
+### Objetivo
+
+Permitir generar una ficha descargable en PDF desde el detalle de una atención, reuniendo la información clínica registrada y los documentos asociados a esa atención.
+
+### Fase 1: ficha PDF base
+
+- [x] Agregar la acción **Generar ficha PDF** en el detalle de una atención.
+- [x] Crear la ruta autenticada `GET /atenciones/{id}/ficha-pdf`.
+- [x] Verificar familia activa y persona activa antes de generar el archivo.
+- [x] Consultar los datos de la atención, persona, tipo, estado y usuario registrador.
+- [x] Incluir motivo, diagnóstico, resultados, indicaciones, observaciones y próxima fecha cuando existan.
+- [x] Incluir medicamentos relacionados con la atención cuando correspondan.
+- [x] Crear una plantilla HTML específica para la ficha.
+- [x] Generar el PDF con una librería instalada por Composer, por ejemplo `dompdf/dompdf`.
+- [x] Descargar el archivo con nombre legible y único, por ejemplo `ficha-atencion-{persona}-{fecha}-{hora}-id{id}.pdf`.
+
+### Fase 2: documentos asociados
+
+- [x] Listar todos los documentos vinculados a la atención.
+- [x] Insertar imágenes JPG, PNG y WEBP dentro de la ficha PDF.
+- [x] Mostrar para cada documento nombre, tipo, fecha, descripción y usuario que lo subió.
+- [x] Para documentos PDF, incluir una referencia dentro de la ficha indicando que el archivo está adjunto o disponible en el sistema.
+- [x] Validar que las imágenes existan en `storage/documentos` antes de intentar incluirlas.
+- [x] Omitir documentos faltantes o dañados sin romper la generación de la ficha.
+
+### Fase 3: PDF completo con adjuntos
+
+- [x] Evaluar una librería de combinación de PDFs, por ejemplo `setasign/fpdi`.
+- [x] Fusionar la ficha generada con los documentos PDF asociados cuando técnicamente sea posible.
+- [x] Mantener las imágenes embebidas en la ficha base.
+- [x] Registrar o mostrar una advertencia cuando un PDF adjunto no pueda fusionarse.
+- [x] Definir un límite de tamaño para evitar descargas demasiado pesadas.
+
+### Seguridad y privacidad
+
+- [x] Reutilizar las mismas reglas de autorización de descarga de documentos.
+- [x] Impedir generar fichas de atenciones de otra familia o persona activa.
+- [x] No exponer rutas físicas de archivos privados en el PDF.
+- [x] Evitar que errores de archivos adjuntos revelen información sensible.
+- [x] Mantener el PDF como descarga autenticada generada bajo demanda.
+
+### Pruebas y verificación
+
+- [x] Probar generación de ficha para atención sin documentos.
+- [x] Probar generación con documentos de imagen asociados.
+- [x] Probar generación con documentos PDF asociados.
+- [x] Probar rechazo al intentar acceder a una atención de otra familia.
+- [x] Probar que una persona no activa no pueda generar la ficha por URL directa.
+- [x] Probar nombres de archivo seguros para la descarga.
+- [x] Ejecutar pruebas enfocadas de atenciones y documentos.
+
+### Entregable
+
+Ficha PDF descargable desde cada atención, con datos clínicos consolidados y documentos asociados incorporados o referenciados según su formato.

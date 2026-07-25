@@ -9,6 +9,7 @@ use App\Core\Response;
 use App\Core\Session;
 use App\Core\Validator;
 use App\Core\View;
+use App\Services\AtencionFichaPdfService;
 use App\Services\AtencionService;
 use App\Services\DocumentoService;
 use App\Services\MedicamentoService;
@@ -24,6 +25,7 @@ final class AtencionController
         private readonly PersonaContext $personContext,
         private readonly MedicamentoService $medications,
         private readonly DocumentoService $documents,
+        private readonly ?AtencionFichaPdfService $attentionPdfs = null,
     ) {
     }
 
@@ -92,6 +94,30 @@ final class AtencionController
                 'atencion_id' => (int) $attention['id'],
             ]),
         ]));
+    }
+
+    public function fichaPdf(Request $request, string $id): Response
+    {
+        $attention = $this->attentions->findForFamily((int) $id, $this->familyId());
+        if ($attention === null) { return Response::html('<h1>404</h1><p>Atención no encontrada.</p>', 404); }
+        if (!$this->personContext->matches((int) $attention['persona_id'])) { return $this->contextMismatch(); }
+
+        $medications = $this->medications->allForFamily($this->familyId(), [
+            'persona_id' => (int) $attention['persona_id'],
+            'atencion_id' => (int) $attention['id'],
+        ]);
+        $documents = $this->documents->allForFamily($this->familyId(), [
+            'persona_id' => (int) $attention['persona_id'],
+            'atencion_id' => (int) $attention['id'],
+        ]);
+        $documents = array_map(function (array $document): array {
+            $download = $this->documents->downloadForFamily((int) $document['id'], $this->familyId());
+            return $download === null ? $document : [...$document, ...$download];
+        }, $documents);
+
+        $generator = $this->attentionPdfs ?? new AtencionFichaPdfService();
+        $content = $generator->render($attention, $medications, $documents);
+        return Response::downloadContent($content, $generator->filename($attention), 'application/pdf');
     }
 
     public function edit(Request $request, string $id): Response

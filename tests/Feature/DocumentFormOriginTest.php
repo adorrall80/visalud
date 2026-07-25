@@ -88,6 +88,58 @@ final class DocumentFormOriginTest extends TestCase
         self::assertStringContainsString('name="fecha_documento" value="' . $today . '"', $direct);
     }
 
+    public function testEditFormUsesCreatedDateWhenDocumentDateIsEmpty(): void
+    {
+        $connection = Database::connect(require dirname(__DIR__, 2) . '/config/database.php');
+        $this->database = $connection->connection();
+        $this->database->beginTransaction();
+        $source = $this->database->query(
+            'SELECT p.id AS persona_id, p.familia_id, fu.usuario_id
+             FROM personas p
+             INNER JOIN familia_usuarios fu ON fu.familia_id = p.familia_id
+             ORDER BY p.id DESC LIMIT 1'
+        )->fetch();
+        self::assertIsArray($source);
+        $typeId = (int) $this->database->query(
+            "SELECT t.id FROM tipos t INNER JOIN procesos p ON p.id = t.proceso_id
+             WHERE p.codigo = 'DOCUMENTO' ORDER BY t.id LIMIT 1"
+        )->fetchColumn();
+
+        $statement = $this->database->prepare(
+            'INSERT INTO documentos
+             (persona_id, tipo_id, subido_por_usuario_id, nombre, archivo_ruta, mime_type, fecha_documento, created_at)
+             VALUES (:persona_id, :tipo_id, :usuario_id, :nombre, :ruta, :mime, NULL, :created_at)'
+        );
+        $statement->execute([
+            'persona_id' => (int) $source['persona_id'],
+            'tipo_id' => $typeId,
+            'usuario_id' => (int) $source['usuario_id'],
+            'nombre' => 'Documento sin fecha explicita',
+            'ruta' => 'tests/documento-sin-fecha.pdf',
+            'mime' => 'application/pdf',
+            'created_at' => '2026-07-18 11:22:33',
+        ]);
+        $documentId = (int) $this->database->lastInsertId();
+
+        $session = new Session();
+        $session->put('user_id', (int) $source['usuario_id']);
+        $session->put('family_id', (int) $source['familia_id']);
+        $context = new PersonaContext(new PersonaService($connection), $session);
+        $context->select((int) $source['persona_id']);
+        $controller = new DocumentoController(
+            new DocumentoService($connection),
+            new AtencionService($connection),
+            $session,
+            new View(dirname(__DIR__, 2) . '/resources/views', $session, $context),
+            new Validator(),
+            $context,
+        );
+
+        $html = $controller->edit(new Request(), (string) $documentId)->content();
+
+        self::assertStringContainsString('name="fecha_documento" value="2026-07-18"', $html);
+    }
+
     private function attention(int $personId, int $userId): int
     {
         $statement = $this->database->prepare(

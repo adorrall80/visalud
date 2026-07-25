@@ -41,6 +41,20 @@ final class Response
         ]);
     }
 
+    public static function downloadContent(string $content, string $downloadName, string $mimeType): self
+    {
+        $safeName = str_replace(["\r", "\n", '"'], '', $downloadName);
+        $asciiName = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $safeName);
+        $asciiName = is_string($asciiName) ? $asciiName : $safeName;
+        $asciiName = preg_replace('/[^A-Za-z0-9._ -]/', '_', $asciiName) ?: 'documento';
+        return new self($content, 200, [
+            'Content-Type' => $mimeType,
+            'Content-Length' => (string) strlen($content),
+            'Content-Disposition' => 'attachment; filename="' . $asciiName . '"; filename*=UTF-8\'\'' . rawurlencode($safeName),
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
     public static function inlineFile(string $path, string $displayName, string $mimeType): self
     {
         if (!is_file($path) || !is_readable($path)) {

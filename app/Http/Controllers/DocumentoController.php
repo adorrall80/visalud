@@ -100,6 +100,9 @@ final class DocumentoController
         $document = $this->documents->findForFamily((int) $id, $this->familyId());
         if ($document === null || !$this->personContext->matches((int) $document['persona_id'])) { return $this->contextMismatch(); }
         $old = $this->session->flashed('old', []);
+        if ($old === [] && empty($document['fecha_documento']) && !empty($document['created_at'])) {
+            $document['fecha_documento'] = substr((string) $document['created_at'], 0, 10);
+        }
         $document = $old === [] ? $document : [...$document, ...$old];
         return Response::html($this->form($document, $this->personContext->active() ?? ['id' => $document['persona_id']], true));
     }
