@@ -12,6 +12,8 @@ final class DocumentoService
     private readonly PDO $database;
     private readonly string $storagePath;
     private readonly int $maxBytes;
+    private const TARGET_IMAGE_BYTES = 51200;
+    private const MAX_IMAGE_SIDE = 1400;
 
     private const MIME_EXTENSIONS = [
         'application/pdf' => ['pdf'],
@@ -99,15 +101,19 @@ final class DocumentoService
             (string) ($file['name'] ?? ''),
             (int) ($file['size'] ?? 0),
         );
-        $relativePath = date('Y/m') . '/' . bin2hex(random_bytes(20)) . '.' . $inspected['extension'];
+        $prepared = $this->prepareForStorage((string) $file['tmp_name'], $inspected);
+        $relativePath = date('Y/m') . '/' . bin2hex(random_bytes(20)) . '.' . $prepared['extension'];
         $absolutePath = $this->storagePath . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativePath);
         $directory = dirname($absolutePath);
         if (!is_dir($directory) && !mkdir($directory, 0775, true) && !is_dir($directory)) {
+            $this->cleanupPreparedFile($prepared);
             throw new \RuntimeException('No fue posible preparar el almacenamiento de documentos.');
         }
-        if (!move_uploaded_file((string) $file['tmp_name'], $absolutePath)) {
+        if (!$this->storePreparedFile($prepared, $absolutePath)) {
+            $this->cleanupPreparedFile($prepared);
             throw new \RuntimeException('No fue posible guardar el documento.');
         }
+        $this->cleanupPreparedFile($prepared);
 
         try {
             $statement = $this->database->prepare(
@@ -124,7 +130,7 @@ final class DocumentoService
                 'usuario_id' => $userId,
                 'nombre' => $this->documentName($data['nombre'] ?? '', (string) $file['name']),
                 'archivo_ruta' => $relativePath,
-                'mime_type' => $inspected['mime_type'],
+                'mime_type' => $prepared['mime_type'],
                 'fecha_documento' => $this->nullable($data['fecha_documento'] ?? null),
                 'descripcion' => $this->nullable($data['descripcion'] ?? null),
             ]);
@@ -156,19 +162,23 @@ final class DocumentoService
                 (string) ($file['name'] ?? ''),
                 (int) ($file['size'] ?? 0),
             );
-            $relativePath = date('Y/m') . '/' . bin2hex(random_bytes(20)) . '.' . $inspected['extension'];
+            $prepared = $this->prepareForStorage((string) $file['tmp_name'], $inspected);
+            $relativePath = date('Y/m') . '/' . bin2hex(random_bytes(20)) . '.' . $prepared['extension'];
             $absolutePath = $this->absolutePath($relativePath);
             $directory = dirname($absolutePath);
             if (!is_dir($directory) && !mkdir($directory, 0775, true) && !is_dir($directory)) {
+                $this->cleanupPreparedFile($prepared);
                 throw new \RuntimeException('No fue posible preparar el almacenamiento de documentos.');
             }
-            if (!move_uploaded_file((string) $file['tmp_name'], $absolutePath)) {
+            if (!$this->storePreparedFile($prepared, $absolutePath)) {
+                $this->cleanupPreparedFile($prepared);
                 throw new \RuntimeException('No fue posible guardar el documento.');
             }
+            $this->cleanupPreparedFile($prepared);
             $replacement = [
                 'relative_path' => $relativePath,
                 'absolute_path' => $absolutePath,
-                'mime_type' => $inspected['mime_type'],
+                'mime_type' => $prepared['mime_type'],
                 'original_name' => (string) ($file['name'] ?? ''),
             ];
         }
@@ -288,6 +298,111 @@ final class DocumentoService
             throw new \InvalidArgumentException('La extensiÃ³n del archivo no coincide con su contenido.');
         }
         return ['mime_type' => $mime, 'extension' => $extension];
+    }
+
+    private function prepareForStorage(string $sourcePath, array $inspected): array
+    {
+        $prepared = [
+            'path' => $sourcePath,
+            'mime_type' => (string) $inspected['mime_type'],
+            'extension' => (string) $inspected['extension'],
+            'temporary' => false,
+        ];
+        if (!str_starts_with($prepared['mime_type'], 'image/')) {
+            return $prepared;
+        }
+
+        $compressed = $this->compressImage($sourcePath);
+        if ($compressed === null) {
+            return $prepared;
+        }
+
+        return [
+            'path' => $compressed,
+            'mime_type' => 'image/jpeg',
+            'extension' => 'jpg',
+            'temporary' => true,
+        ];
+    }
+
+    private function compressImage(string $sourcePath): ?string
+    {
+        if (!function_exists('imagecreatefromstring') || !function_exists('imagejpeg')) {
+            return null;
+        }
+        $content = file_get_contents($sourcePath);
+        if ($content === false) {
+            return null;
+        }
+        $source = @imagecreatefromstring($content);
+        if (!$source instanceof \GdImage) {
+            return null;
+        }
+
+        $width = imagesx($source);
+        $height = imagesy($source);
+        $baseScale = min(1.0, self::MAX_IMAGE_SIDE / max($width, $height));
+        $qualities = [82, 72, 62, 52, 42, 35];
+        $scale = $baseScale;
+        $bestPath = null;
+
+        while ($scale >= 0.35) {
+            $targetWidth = max(1, (int) round($width * $scale));
+            $targetHeight = max(1, (int) round($height * $scale));
+            $canvas = imagecreatetruecolor($targetWidth, $targetHeight);
+            if (!$canvas instanceof \GdImage) {
+                break;
+            }
+            $white = imagecolorallocate($canvas, 255, 255, 255);
+            imagefilledrectangle($canvas, 0, 0, $targetWidth, $targetHeight, $white);
+            imagecopyresampled($canvas, $source, 0, 0, 0, 0, $targetWidth, $targetHeight, $width, $height);
+
+            foreach ($qualities as $quality) {
+                $path = tempnam(sys_get_temp_dir(), 'visalud-img-');
+                if (!is_string($path)) {
+                    continue;
+                }
+                imagejpeg($canvas, $path, $quality);
+                $size = filesize($path);
+                if (is_int($size)) {
+                    if ($bestPath === null || $size < (int) filesize($bestPath)) {
+                        if ($bestPath !== null && is_file($bestPath)) {
+                            @unlink($bestPath);
+                        }
+                        $bestPath = $path;
+                    } else {
+                        @unlink($path);
+                    }
+                    if ($size <= self::TARGET_IMAGE_BYTES) {
+                        imagedestroy($canvas);
+                        imagedestroy($source);
+                        return $bestPath;
+                    }
+                } else {
+                    @unlink($path);
+                }
+            }
+            imagedestroy($canvas);
+            $scale *= 0.82;
+        }
+
+        imagedestroy($source);
+        return $bestPath;
+    }
+
+    private function storePreparedFile(array $prepared, string $absolutePath): bool
+    {
+        if ((bool) $prepared['temporary']) {
+            return rename((string) $prepared['path'], $absolutePath);
+        }
+        return move_uploaded_file((string) $prepared['path'], $absolutePath);
+    }
+
+    private function cleanupPreparedFile(array $prepared): void
+    {
+        if ((bool) $prepared['temporary'] && is_file((string) $prepared['path'])) {
+            @unlink((string) $prepared['path']);
+        }
     }
 
     private function validateRelations(int $familyId, array $data): void

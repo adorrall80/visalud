@@ -84,6 +84,33 @@ final class DocumentServiceTest extends TestCase
         $this->documents->analyzeFile($file, 'informe.pdf', 50 * 1024 * 1024);
     }
 
+    public function testCompressesImagesForStorage(): void
+    {
+        if (!function_exists('imagecreatetruecolor') || !function_exists('imagepng')) {
+            self::markTestSkipped('GD no está disponible para comprimir imágenes.');
+        }
+        $image = imagecreatetruecolor(2200, 1600);
+        self::assertInstanceOf(\GdImage::class, $image);
+        for ($y = 0; $y < 1600; $y += 20) {
+            $color = imagecolorallocate($image, $y % 255, (120 + $y) % 255, (220 + $y) % 255);
+            imagefilledrectangle($image, 0, $y, 2200, $y + 19, $color);
+        }
+        $source = tempnam(sys_get_temp_dir(), 'portal-doc-image-');
+        self::assertIsString($source);
+        imagepng($image, $source);
+        imagedestroy($image);
+        $this->temporaryFiles[] = $source;
+
+        $method = new \ReflectionMethod(DocumentoService::class, 'prepareForStorage');
+        $prepared = $method->invoke($this->documents, $source, ['mime_type' => 'image/png', 'extension' => 'png']);
+
+        self::assertSame('image/jpeg', $prepared['mime_type']);
+        self::assertSame('jpg', $prepared['extension']);
+        self::assertTrue($prepared['temporary']);
+        self::assertLessThanOrEqual(51200, filesize($prepared['path']));
+        $this->temporaryFiles[] = $prepared['path'];
+    }
+
     public function testDocumentAccessAndDeletionAreRestrictedByFamily(): void
     {
         $config = require dirname(__DIR__, 2) . '/config/filesystems.php';
