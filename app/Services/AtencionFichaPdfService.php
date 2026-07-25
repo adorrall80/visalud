@@ -180,7 +180,7 @@ final class AtencionFichaPdfService
     {
         return '<!doctype html><html lang="es"><head><meta charset="UTF-8"><style>' . $this->css() . '</style></head><body>'
             . '<header><p class="eyebrow">Ficha de atención</p><h1>Info adicional</h1></header>'
-            . '<section class="card"><div class="block"><p>' . nl2br($this->escape($text)) . '</p></div></section>'
+            . '<section class="card final-text-card"><div class="block"><p>' . $this->escape($text) . '</p></div></section>'
             . '</body></html>';
     }
 
@@ -264,7 +264,7 @@ final class AtencionFichaPdfService
 
     private function css(): string
     {
-        return 'body{font-family:DejaVu Sans,sans-serif;color:#173d35;font-size:12px;line-height:1.45;margin:28px}header{border-bottom:3px solid #2d7f6f;padding-bottom:14px;margin-bottom:18px}.eyebrow{color:#2d7f6f;font-size:11px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;margin:0 0 4px}h1{font-size:27px;margin:0;color:#12362f}h2{font-size:16px;margin:0 0 12px;color:#12362f}h3{font-size:12px;margin:0 0 4px;color:#12362f}.subtitle{font-size:13px;margin:4px 0 0;color:#5b716b}.card{border:1px solid #d7e4df;border-radius:10px;padding:14px;margin-bottom:14px;page-break-inside:avoid}.block{margin-bottom:10px}.block p{margin:0;white-space:normal}table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #e3ece8;padding:7px 8px;text-align:left;vertical-align:top}th{width:32%;color:#5b716b;font-weight:bold}.muted{color:#6b7f79}.document{border-top:1px solid #e3ece8;padding-top:10px;margin-top:10px;page-break-inside:avoid}.document:first-of-type{border-top:0;margin-top:0;padding-top:0}.document p{margin:0 0 7px}.document-image{display:block;max-width:100%;max-height:520px;margin-top:8px;border:1px solid #d7e4df;border-radius:8px}small{color:#5b716b}footer{border-top:1px solid #d7e4df;color:#6b7f79;font-size:10px;margin-top:18px;padding-top:10px}';
+        return 'body{font-family:DejaVu Sans,sans-serif;color:#173d35;font-size:12px;line-height:1.45;margin:28px}header{border-bottom:3px solid #2d7f6f;padding-bottom:14px;margin-bottom:18px}.eyebrow{color:#2d7f6f;font-size:11px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;margin:0 0 4px}h1{font-size:27px;margin:0;color:#12362f}h2{font-size:16px;margin:0 0 12px;color:#12362f}h3{font-size:12px;margin:0 0 4px;color:#12362f}.subtitle{font-size:13px;margin:4px 0 0;color:#5b716b}.card{border:1px solid #d7e4df;border-radius:10px;padding:14px;margin-bottom:14px;page-break-inside:avoid}.final-text-card{page-break-inside:auto}.block{margin-bottom:10px}.block p{margin:0;white-space:normal}.final-text-card .block p{white-space:pre-wrap;overflow-wrap:break-word}table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #e3ece8;padding:7px 8px;text-align:left;vertical-align:top}th{width:32%;color:#5b716b;font-weight:bold}.muted{color:#6b7f79}.document{border-top:1px solid #e3ece8;padding-top:10px;margin-top:10px;page-break-inside:avoid}.document:first-of-type{border-top:0;margin-top:0;padding-top:0}.document p{margin:0 0 7px}.document-image{display:block;max-width:100%;max-height:520px;margin-top:8px;border:1px solid #d7e4df;border-radius:8px}small{color:#5b716b}footer{border-top:1px solid #d7e4df;color:#6b7f79;font-size:10px;margin-top:18px;padding-top:10px}';
     }
 
     private function slug(string $value): string
